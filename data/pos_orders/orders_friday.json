@@ -1,0 +1,25 @@
+{
+  "source": "MockPOS export — raw format, includes customer fields the pipeline must strip",
+  "orders": [
+    {"order_id": "F-1001", "timestamp": "2026-08-14T17:32:00", "customer_name": "Sarah Kim", "phone": "555-867-5309", "notes": "ring side door", "items": [{"menu_item": "Margherita", "qty": 1}, {"menu_item": "Garlic Knots", "qty": 1}]},
+    {"order_id": "F-1002", "timestamp": "2026-08-14T17:41:00", "customer_name": "Dev Patel", "phone": "555-201-4477", "notes": "", "items": [{"menu_item": "Pepperoni", "qty": 1}]},
+    {"order_id": "F-1003", "timestamp": "2026-08-14T17:55:00", "customer_name": "Alice Nguyen", "phone": "555-330-1188", "notes": "extra napkins", "items": [{"menu_item": "Sausage & Mushroom", "qty": 1}]},
+    {"order_id": "F-1004", "timestamp": "2026-08-14T18:03:00", "customer_name": "Marcus Webb", "phone": "555-742-9931", "notes": "call on arrival, marcus.webb@example.com", "items": [{"menu_item": "Pepperoni", "qty": 2}, {"menu_item": "Calzone", "qty": 1}]},
+    {"order_id": "F-1005", "timestamp": "2026-08-14T18:10:00", "customer_name": "Jenny Park", "phone": "555-118-2065", "notes": "", "items": [{"menu_item": "Margherita", "qty": 1}]},
+    {"order_id": "F-1006", "timestamp": "2026-08-14T18:18:00", "customer_name": "Tom Alvarez", "phone": "555-909-1414", "notes": "no onions actually keep them", "items": [{"menu_item": "Veggie", "qty": 1}]},
+    {"order_id": "F-1007", "timestamp": "2026-08-14T18:26:00", "customer_name": "Rick Donato", "phone": "555-666-2001", "notes": "", "items": [{"menu_item": "Sausage & Mushroom", "qty": 2}]},
+    {"order_id": "F-1008", "timestamp": "2026-08-14T18:34:00", "customer_name": "Priya Shah", "phone": "555-483-7261", "notes": "", "items": [{"menu_item": "White Pie", "qty": 1}]},
+    {"order_id": "F-1009", "timestamp": "2026-08-14T18:42:00", "customer_name": "Ben Okafor", "phone": "555-217-8834", "notes": "table 6", "items": [{"menu_item": "Pepperoni", "qty": 1}, {"menu_item": "Garlic Knots", "qty": 1}]},
+    {"order_id": "F-1010", "timestamp": "2026-08-14T18:50:00", "customer_name": "Lena Fischer", "phone": "555-372-5540", "notes": "", "items": [{"menu_item": "Veggie", "qty": 1}]},
+    {"order_id": "F-1011", "timestamp": "2026-08-14T18:58:00", "customer_name": "Omar Haddad", "phone": "555-822-6193", "notes": "", "items": [{"menu_item": "Marinara", "qty": 1}]},
+    {"order_id": "F-1012", "timestamp": "2026-08-14T19:07:00", "customer_name": "Grace Liu", "phone": "555-014-7772", "notes": "birthday — candle if you have one", "items": [{"menu_item": "Margherita", "qty": 2}]},
+    {"order_id": "F-1013", "timestamp": "2026-08-14T19:15:00", "customer_name": "Nick Romano", "phone": "555-556-8320", "notes": "", "items": [{"menu_item": "Sausage & Mushroom", "qty": 1}, {"menu_item": "Garlic Knots", "qty": 1}]},
+    {"order_id": "F-1014", "timestamp": "2026-08-14T19:24:00", "customer_name": "Dana Whitfield", "phone": "555-641-0952", "notes": "", "items": [{"menu_item": "Veggie", "qty": 2}]},
+    {"order_id": "F-1015", "timestamp": "2026-08-14T19:33:00", "customer_name": "Hector Ruiz", "phone": "555-773-2846", "notes": "leave with doorman", "items": [{"menu_item": "Pepperoni", "qty": 1}]},
+    {"order_id": "F-1016", "timestamp": "2026-08-14T19:41:00", "customer_name": "Maya Goldberg", "phone": "555-198-4425", "notes": "", "items": [{"menu_item": "White Pie", "qty": 1}]},
+    {"order_id": "F-1017", "timestamp": "2026-08-14T19:52:00", "customer_name": "Sam Torres", "phone": "555-930-6617", "notes": "", "items": [{"menu_item": "Calzone", "qty": 1}]},
+    {"order_id": "F-1018", "timestamp": "2026-08-14T20:04:00", "customer_name": "Iris Chen", "phone": "555-285-3390", "notes": "gluten allergy at table — asked, it's for someone else", "items": [{"menu_item": "Pepperoni", "qty": 1}]},
+    {"order_id": "F-1019", "timestamp": "2026-08-14T20:17:00", "customer_name": "Paul Novak", "phone": "555-467-1029", "notes": "", "items": [{"menu_item": "Sausage & Mushroom", "qty": 1}]},
+    {"order_id": "F-1020", "timestamp": "2026-08-14T20:31:00", "customer_name": "Ruth Adeyemi", "phone": "555-604-8873", "notes": "late pickup ok", "items": [{"menu_item": "Marinara", "qty": 1}]}
+  ]
+}
