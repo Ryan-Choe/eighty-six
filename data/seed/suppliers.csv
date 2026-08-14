@@ -1,0 +1,4 @@
+name,contact,min_order_cents,lead_time_days
+Roma Foods,orders@romafoods.example,25000,2
+Cascade Produce,sales@cascadeproduce.example,0,1
+Valco Cash & Carry,counter@valcocc.example,0,0

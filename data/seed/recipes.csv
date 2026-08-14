@@ -1,0 +1,51 @@
+menu_item,ingredient,qty_per_item
+Margherita,00 flour,250
+Margherita,yeast,5
+Margherita,olive oil,15
+Margherita,tomato sauce,100
+Margherita,fresh mozzarella,150
+Margherita,basil,5
+Pepperoni,00 flour,250
+Pepperoni,yeast,5
+Pepperoni,olive oil,10
+Pepperoni,tomato sauce,100
+Pepperoni,low-moisture mozzarella,140
+Pepperoni,pepperoni,80
+Sausage & Mushroom,00 flour,250
+Sausage & Mushroom,yeast,5
+Sausage & Mushroom,olive oil,10
+Sausage & Mushroom,tomato sauce,100
+Sausage & Mushroom,low-moisture mozzarella,130
+Sausage & Mushroom,italian sausage,120
+Sausage & Mushroom,mushrooms,80
+Veggie,00 flour,250
+Veggie,yeast,5
+Veggie,olive oil,10
+Veggie,tomato sauce,100
+Veggie,low-moisture mozzarella,120
+Veggie,mushrooms,60
+Veggie,red onion,50
+Veggie,bell pepper,60
+White Pie,00 flour,250
+White Pie,yeast,5
+White Pie,olive oil,20
+White Pie,fresh mozzarella,120
+White Pie,pecorino,40
+White Pie,garlic,10
+Marinara,00 flour,250
+Marinara,yeast,5
+Marinara,olive oil,15
+Marinara,tomato sauce,120
+Marinara,garlic,15
+Marinara,oregano,3
+Calzone,00 flour,300
+Calzone,yeast,6
+Calzone,olive oil,10
+Calzone,tomato sauce,80
+Calzone,low-moisture mozzarella,150
+Calzone,pepperoni,40
+Garlic Knots,00 flour,150
+Garlic Knots,yeast,3
+Garlic Knots,olive oil,25
+Garlic Knots,garlic,20
+Garlic Knots,pecorino,15
