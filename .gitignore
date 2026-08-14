@@ -1,0 +1,16 @@
+# secrets
+.env
+
+# build artifacts of `make seed` — never committed, the cold-start test rebuilds them
+*.db
+chroma_db/
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# os
+.DS_Store
+.vscode/
