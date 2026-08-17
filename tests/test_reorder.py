@@ -208,7 +208,9 @@ def test_price_po_rejects_empty_orders(conn):
 
 
 def test_supplier_terms_are_source_filtered():
-    from eightysix.rag import retrieve_supplier_terms
+    from eightysix.rag import CHROMA_DIR, retrieve_supplier_terms
+    if not (CHROMA_DIR / "chroma.sqlite3").exists():
+        pytest.skip("Chroma index not built -- run `make seed` first")
     docs = retrieve_supplier_terms("Valco Cash & Carry")
     assert docs, "index must contain Valco terms"
     assert {d.metadata["source"] for d in docs} == {"valco_cash_carry"}

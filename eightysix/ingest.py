@@ -83,6 +83,26 @@ def apply_orders(conn: sqlite3.Connection, orders: list[dict]) -> dict:
     }
 
 
+def _rebase_timestamps(orders: list[dict]) -> list[dict]:
+    """Shift the batch so its latest order lands now, keeping relative spacing.
+
+    The committed demo file is dated Friday 2026-08-14. Usage history windows
+    on the real clock, so without rebasing, the "how fast are we burning it"
+    numbers go silently empty a week after that date -- fine for us, wrong for
+    a reviewer cloning later. Order content stays byte-identical; only the
+    clock moves.
+    """
+    from datetime import datetime
+
+    latest = max(datetime.fromisoformat(o["timestamp"]) for o in orders)
+    delta = datetime.now() - latest
+    return [
+        {**o, "timestamp": (datetime.fromisoformat(o["timestamp"]) + delta)
+                            .strftime("%Y-%m-%dT%H:%M:%S")}
+        for o in orders
+    ]
+
+
 def ingest_file(conn: sqlite3.Connection, path: str) -> dict:
     with open(path) as f:
         raw = json.load(f)
@@ -94,6 +114,8 @@ def ingest_file(conn: sqlite3.Connection, path: str) -> dict:
         except MalformedOrder as e:
             malformed.append({"order_id": raw_order.get("order_id", f"#{i}"),
                               "malformed": str(e)})
+    if orders:
+        orders = _rebase_timestamps(orders)
     summary = apply_orders(conn, orders)
     summary["errors"] = malformed + summary["errors"]
     return summary
