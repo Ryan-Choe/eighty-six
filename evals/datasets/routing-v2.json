@@ -1,0 +1,76 @@
+{
+ "dataset": "eighty-six-routing-v2",
+ "description": "Owner utterances -> expected router intent. Exact match.",
+ "examples": [
+  {
+   "inputs": {
+    "message": "how much 00 flour do we have left?"
+   },
+   "outputs": {
+    "intent": "inventory"
+   }
+  },
+  {
+   "inputs": {
+    "message": "draft an order to restock before the weekend"
+   },
+   "outputs": {
+    "intent": "reorder"
+   }
+  },
+  {
+   "inputs": {
+    "message": "how long can thawed dough sit in the walk-in?"
+   },
+   "outputs": {
+    "intent": "policy"
+   }
+  },
+  {
+   "inputs": {
+    "message": "we're almost out of pepperoni"
+   },
+   "outputs": {
+    "intent": "reorder"
+   },
+   "metadata": {
+    "note": "judgment call, documented in README: a statement of shortage routes to the useful action (restock), not a stock report"
+   }
+  },
+  {
+   "inputs": {
+    "message": "can we make 20 margheritas tonight?"
+   },
+   "outputs": {
+    "intent": "inventory"
+   }
+  },
+  {
+   "inputs": {
+    "message": "write an instagram caption for the new pie"
+   },
+   "outputs": {
+    "intent": "off_topic"
+   }
+  },
+  {
+   "inputs": {
+    "message": "does Valco deliver?"
+   },
+   "outputs": {
+    "intent": "policy"
+   },
+   "metadata": {
+    "note": "asking how a vendor works is a KB question, not a purchase"
+   }
+  },
+  {
+   "inputs": {
+    "message": "what's Roma Foods' minimum order?"
+   },
+   "outputs": {
+    "intent": "policy"
+   }
+  }
+ ]
+}

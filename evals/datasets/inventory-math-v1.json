@@ -1,0 +1,26 @@
+{
+  "dataset": "eighty-six-inventory-math-v1",
+  "description": "Order batches -> exact stock deltas and flags. Deterministic ==, integer grams.",
+  "examples": [
+    {"inputs": {"orders": [
+        {"order_id": "E1-1", "timestamp": "2026-08-14T18:00:00", "items": [{"menu_item": "Margherita", "qty": 2}]},
+        {"order_id": "E1-2", "timestamp": "2026-08-14T18:05:00", "items": [{"menu_item": "Pepperoni", "qty": 2}, {"menu_item": "Garlic Knots", "qty": 1}]}
+      ]},
+     "outputs": {"applied": 2, "errors": 0,
+       "stock_after": {"fresh mozzarella": 1700, "low-moisture mozzarella": 4720, "pepperoni": 1240, "00 flour": 23850, "garlic": 780},
+       "low_stock": []},
+     "metadata": {"note": "hand-check: 2 margherita = 300g fresh mozz; 2 pepperoni = 280g LM mozz + 160g pepperoni; flour 2*250+2*250+150"}},
+    {"inputs": {"orders": []},
+     "outputs": {"applied": 0, "errors": 0, "stock_after": {"fresh mozzarella": 2000}, "low_stock": []},
+     "metadata": {"note": "empty batch: nothing changes, nothing flagged"}},
+    {"inputs": {"orders": [
+        {"order_id": "E3-1", "timestamp": "2026-08-14T18:00:00", "items": [{"menu_item": "Hawaiian", "qty": 1}]},
+        {"order_id": "E3-2", "timestamp": "2026-08-14T18:01:00", "items": [{"menu_item": "Marinara", "qty": -2}]},
+        {"order_id": "E3-3", "timestamp": "2026-08-14T18:02:00", "items": [{"menu_item": "Marinara", "qty": 1}]}
+      ]},
+     "outputs": {"applied": 1, "errors": 2,
+       "stock_after": {"tomato sauce": 11880, "fresh mozzarella": 2000},
+       "low_stock": []},
+     "metadata": {"note": "unknown item rejected whole, negative qty rejected whole, valid order still lands"}}
+  ]
+}

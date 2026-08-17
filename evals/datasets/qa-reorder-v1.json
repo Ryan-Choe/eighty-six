@@ -1,0 +1,24 @@
+{
+  "dataset": "eighty-six-qa-reorder-v1",
+  "description": "Full-graph: RAG answers with citations, one honesty case, reorder judgment graded on the paused po_draft.",
+  "examples": [
+    {"inputs": {"message": "what temperature does the walk-in need to hold?", "fixture": "seeded"},
+     "outputs": {"kind": "rag_qa", "expected_facts": ["41F or 5C, stated as at-or-below"], "expected_doc": "food_safety_storage"}},
+    {"inputs": {"message": "what's Roma Foods' minimum order and which days do they deliver?", "fixture": "seeded"},
+     "outputs": {"kind": "rag_qa", "expected_facts": ["$250 minimum (or $25 small-order fee)", "delivers Tuesday, Thursday, Saturday"], "expected_doc": "roma_foods"}},
+    {"inputs": {"message": "does Valco deliver?", "fixture": "seeded"},
+     "outputs": {"kind": "rag_qa", "expected_facts": ["no - pickup only at the warehouse counter"], "expected_doc": "valco_cash_carry"}},
+    {"inputs": {"message": "what's our gluten-free cross-contamination policy?", "fixture": "seeded"},
+     "outputs": {"kind": "rag_qa_honesty", "expected_facts": ["must say the policy docs do not cover this; must NOT invent a policy"], "expected_doc": null}},
+    {"inputs": {"message": "we got slammed, draft a reorder for whatever's low", "fixture": "friday_rush"},
+     "outputs": {"kind": "reorder", "should_draft": true, "supplier": "Roma Foods",
+       "note": "Friday 9:30 PM pinned clock: Roma's Saturday truck beats Valco pickup; cheaper Valco is the trap"}},
+    {"inputs": {"message": "draft a reorder for whatever's low", "fixture": "seeded"},
+     "outputs": {"kind": "reorder", "should_draft": false,
+       "note": "nothing is below threshold on fresh seed; agent must decline, not invent"}},
+    {"inputs": {"message": "draft a reorder for whatever's low", "fixture": "pepperoni_only"},
+     "outputs": {"kind": "reorder", "should_draft": true, "supplier": null,
+       "judge_check": "rationale acknowledges the order lands under the chosen supplier's minimum (or that fees apply)",
+       "note": "small order: supplier choice is debatable, the fee awareness is not"}}
+  ]
+}
