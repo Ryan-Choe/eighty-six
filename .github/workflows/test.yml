@@ -1,0 +1,16 @@
+name: test
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m venv .venv && .venv/bin/pip install -r requirements.txt
+      # seed builds the SQLite db and the Chroma index (downloads the small
+      # embedding model); no API keys are needed anywhere in the suite
+      - run: .venv/bin/python scripts/seed_db.py && .venv/bin/python scripts/ingest_kb.py
+      - run: .venv/bin/python -m pytest -q
