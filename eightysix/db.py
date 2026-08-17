@@ -98,6 +98,29 @@ def init_schema(conn: sqlite3.Connection) -> None:
 
 # --- reads -------------------------------------------------------------------
 
+
+# Name resolution: exact -> unique substring -> ambiguous list -> full catalog.
+# Deterministic code does the resolving so the model never has to guess a name.
+RESOLVABLE_TABLES = {"ingredients", "menu_items"}
+
+
+def resolve_name(conn, table: str, name: str) -> tuple[str, str | list[str]]:
+    """Returns ("ok", canonical) | ("ambiguous", candidates) | ("unknown", all_names)."""
+    if table not in RESOLVABLE_TABLES:  # keeps the f-string un-injectable
+        raise ValueError(f"unresolvable table: {table}")
+    names = [r["name"] for r in conn.execute(f"SELECT name FROM {table}")]
+    wanted = name.strip().lower()
+    exact = [n for n in names if n.lower() == wanted]
+    if exact:
+        return ("ok", exact[0])
+    subs = [n for n in names if wanted in n.lower() or n.lower() in wanted]
+    if len(subs) == 1:
+        return ("ok", subs[0])
+    if subs:
+        return ("ambiguous", sorted(subs))
+    return ("unknown", sorted(names))
+
+
 def get_stock(conn, ingredient: str) -> dict | None:
     row = conn.execute(
         """SELECT name, unit, on_hand, par_level, reorder_threshold, storage
@@ -140,7 +163,8 @@ def get_recipe_map(conn) -> dict[str, list[tuple[int, int]]]:
 def get_usage(conn, ingredient: str, days: int = 7) -> dict | None:
     row = conn.execute(
         """SELECT i.name, i.unit, i.on_hand,
-                  COALESCE(SUM(-m.delta), 0) AS total_used
+                  COALESCE(SUM(-m.delta), 0) AS total_used,
+                  COUNT(DISTINCT date(m.ts)) AS data_days
            FROM ingredients i
            LEFT JOIN stock_movements m
              ON m.ingredient_id = i.id AND m.reason = 'order'
@@ -151,15 +175,60 @@ def get_usage(conn, ingredient: str, days: int = 7) -> dict | None:
     ).fetchone()
     if row is None:
         return None
-    total = row["total_used"]
-    avg_daily = total / days if days else 0
+    total, data_days = row["total_used"], row["data_days"]
+    # Burn rate per day that actually has sales. Dividing by the requested
+    # window reports a 7x-too-low rate when only one day of history exists;
+    # days-with-data treats missing days as "no data", not "no sales".
+    avg_daily = total / data_days if data_days else 0
     return {
         "name": row["name"],
         "unit": row["unit"],
         "on_hand": row["on_hand"],
+        "window_days": days,
+        "data_days": data_days,
         "total_used": total,
         "avg_daily": round(avg_daily, 1),
-        "days_of_cover": round(row["on_hand"] / avg_daily, 1) if avg_daily else None,
+        "days_of_cover": round(max(row["on_hand"], 0) / avg_daily, 1) if avg_daily else None,
+    }
+
+
+def check_feasibility(conn, menu_item: str, servings: int) -> dict | None:
+    """How many of this menu item can we make right now, and what runs out first."""
+    rows = conn.execute(
+        """SELECT i.name, i.unit, i.on_hand, r.qty_per_item
+           FROM recipes r
+           JOIN menu_items m ON m.id = r.menu_item_id
+           JOIN ingredients i ON i.id = r.ingredient_id
+           WHERE m.name = ? COLLATE NOCASE""",
+        (menu_item,),
+    ).fetchall()
+    if not rows:
+        return None
+
+    # integer division: you can't plate a partial pizza. max(0, ...) because
+    # oversold stock can go negative in the ledger, but "-87 servings" is
+    # not an answer -- zero is.
+    possible = {r["name"]: max(0, r["on_hand"]) // r["qty_per_item"] for r in rows}
+    max_servings = min(possible.values())
+    limiting = min(possible, key=possible.get)
+    shortfalls = [
+        {
+            "ingredient": r["name"],
+            "needed": r["qty_per_item"] * servings,
+            "on_hand": r["on_hand"],
+            "short_by": r["qty_per_item"] * servings - r["on_hand"],
+            "unit": r["unit"],
+        }
+        for r in rows
+        if r["qty_per_item"] * servings > r["on_hand"]
+    ]
+    return {
+        "menu_item": menu_item,
+        "requested": servings,
+        "feasible": max_servings >= servings,
+        "max_servings": max_servings,
+        "limiting_ingredient": limiting,
+        "shortfalls": shortfalls,
     }
 
 

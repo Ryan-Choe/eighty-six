@@ -94,3 +94,17 @@ def test_minimize_strips_customer_fields():
     clean = minimize_order(raw)
     assert set(clean.keys()) == {"order_id", "timestamp", "items"}
     assert "555-867-5309" not in str(clean)
+
+
+def test_feasibility_counts_whole_servings_and_names_the_limiter(conn):
+    apply_orders(conn, [order("T-5", [{"menu_item": "Margherita", "qty": 5}])])
+    # 2000 - 5*150 = 1250 g mozzarella left, at 150 g per pie -> 8 more pies
+    result = db.check_feasibility(conn, "Margherita", 12)
+    assert result["feasible"] is False
+    assert result["max_servings"] == 8
+    assert result["limiting_ingredient"] == "fresh mozzarella"
+    assert result["shortfalls"][0]["short_by"] == 12 * 150 - 1250
+
+
+def test_feasibility_on_unknown_menu_item_returns_none(conn):
+    assert db.check_feasibility(conn, "Hawaiian", 1) is None

@@ -46,6 +46,13 @@ def apply_orders(conn: sqlite3.Connection, orders: list[dict]) -> dict:
             errors.append({"order_id": oid, "unknown_items": unknown})
             continue
 
+        # POS data is external input. A negative qty would INCREASE stock and
+        # poison the usage ledger; zero writes noise. Reject, don't clamp.
+        bad_qty = [i for i in order["items"] if not isinstance(i["qty"], int) or i["qty"] < 1]
+        if bad_qty:
+            errors.append({"order_id": oid, "invalid_qty": bad_qty})
+            continue
+
         db.record_order(conn, oid, order["timestamp"], order["items"])
         for item in order["items"]:
             for ingredient_id, qty_per_item in recipe_map[item["menu_item"]]:
