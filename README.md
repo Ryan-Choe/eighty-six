@@ -33,15 +33,29 @@ graph TD;
 	route(route)
 	inventory_agent(inventory_agent)
 	inventory_tools(inventory_tools)
+	policy_qa(policy_qa)
+	draft_po(draft_po)
+	human_approval(human_approval)
+	send_po(send_po)
+	cancel_po(cancel_po)
 	deflect(deflect)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> route;
+	draft_po -.-> __end__;
+	draft_po -.-> human_approval;
+	human_approval -.-> cancel_po;
+	human_approval -.-> send_po;
 	inventory_agent -.-> __end__;
 	inventory_agent -. &nbsp;tools&nbsp; .-> inventory_tools;
 	inventory_tools --> inventory_agent;
 	route -.-> deflect;
+	route -.-> draft_po;
 	route -.-> inventory_agent;
+	route -.-> policy_qa;
+	cancel_po --> __end__;
 	deflect --> __end__;
+	policy_qa --> __end__;
+	send_po --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc

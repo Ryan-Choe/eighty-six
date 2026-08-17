@@ -241,9 +241,9 @@ def get_supplier_options(conn, ingredient_names: list[str]) -> list[dict]:
             FROM supplier_items si
             JOIN suppliers s ON s.id = si.supplier_id
             JOIN ingredients i ON i.id = si.ingredient_id
-            WHERE i.name IN ({qmarks}) COLLATE NOCASE
+            WHERE lower(i.name) IN ({qmarks})
             ORDER BY i.name, si.price_cents""",
-        ingredient_names,
+        [n.lower() for n in ingredient_names],
     ).fetchall()
     return [dict(r) for r in rows]
 
