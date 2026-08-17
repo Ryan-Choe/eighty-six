@@ -18,7 +18,36 @@ make run        # or: make cli
 
 ## The graph
 
-<!-- auto-generated Mermaid + interrupt annotation (Day 2) -->
+Generated from the compiled graph with `make graph`, so it can't drift from the code.
+
+<!-- graph:start -->
+
+```mermaid
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	route(route)
+	inventory_agent(inventory_agent)
+	inventory_tools(inventory_tools)
+	deflect(deflect)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> route;
+	inventory_agent -.-> __end__;
+	inventory_agent -. &nbsp;tools&nbsp; .-> inventory_tools;
+	inventory_tools --> inventory_agent;
+	route -.-> deflect;
+	route -.-> inventory_agent;
+	deflect --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc
+```
+
+<!-- graph:end -->
 
 <!-- state write-map table: field / written by / read by (Day 2, hand-written) -->
 

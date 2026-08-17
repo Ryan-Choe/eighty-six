@@ -34,3 +34,6 @@ eval:  ## upload datasets + run LangSmith experiments
 
 demo:  ## curated demo runs into the eighty-six-demo LangSmith project
 	LANGSMITH_PROJECT=eighty-six-demo $(PY) scripts/demo_runs.py
+
+graph:   ## regenerate the Mermaid diagram in README from the compiled graph
+	$(PY) scripts/print_graph.py
