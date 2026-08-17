@@ -12,4 +12,4 @@ get a use-by date 7 days out, day of opening counts as day one.
 ## Shortages
 Count cases against the invoice before the driver leaves. Note shortages
 on the invoice copy; photograph it. Roma credits automatically, Cascade
-needs the photo same-day.
+needs the photo within 24 hours of delivery.

@@ -4,8 +4,8 @@ Warehouse club on Kent Ave. No account needed, walk-in only.
 
 ## Pickup only
 Valco does not deliver. All orders are picked up at the warehouse
-counter. Counter hours are 6am-2pm Monday through Saturday, closed
-Sunday. Someone from the restaurant has to drive over during service
+counter. Counter hours are 6am-2pm Monday through Friday, closed
+weekends. Someone from the restaurant has to drive over during service
 prep hours to get anything.
 
 ## Pricing

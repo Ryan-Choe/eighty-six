@@ -1,5 +1,5 @@
 """Populate the eighty-six-demo LangSmith project with a clean, curated set of
-runs -- the reviewer opens ~a dozen named runs telling one story, not hundreds
+named runs -- the reviewer opens a handful of runs telling one story, not hundreds
 of dev traces. Run via `make demo` (which sets LANGSMITH_PROJECT)."""
 
 import sys
