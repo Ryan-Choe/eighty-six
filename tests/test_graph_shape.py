@@ -18,6 +18,11 @@ def test_graph_has_exactly_the_nodes_the_readme_claims():
         "route",
         "inventory_agent",
         "inventory_tools",
+        "policy_qa",
+        "draft_po",
+        "human_approval",
+        "send_po",
+        "cancel_po",
         "deflect",
     }
 

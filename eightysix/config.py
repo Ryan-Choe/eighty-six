@@ -20,6 +20,17 @@ MAX_TOKENS = 4096
 # turn. 12 supersteps = ~5 tool rounds, double what a real question needs.
 RECURSION_LIMIT = 12
 
+# The demo story is calendar-dependent: the planted supplier tradeoff only
+# bites on a Friday night (Roma's Saturday truck vs Valco's weekday counter).
+# Pinning the clock makes the recording reproducible on any real day, and the
+# README says so out loud. Unset = real wall clock.
+DEMO_NOW = os.getenv("EIGHTYSIX_DEMO_NOW", "")
+
+
+def scenario_now() -> str:
+    from datetime import datetime
+    return DEMO_NOW or datetime.now().strftime("%A %B %d, %I:%M %p")
+
 
 def chat_model(model: str | None = None, max_tokens: int = MAX_TOKENS) -> ChatAnthropic:
     return ChatAnthropic(model=model or MODEL, max_tokens=max_tokens, max_retries=2)
