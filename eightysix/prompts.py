@@ -7,7 +7,10 @@ inventory  - questions about current stock, what's running low, whether there's
 reorder    - wants to buy more of something, asks what to order, asks about
              suppliers, prices, delivery, or says they're running out in a way
              that implies restocking.
-policy     - food safety, storage temperatures, shelf life, handling, receiving.
+policy     - how things work here: food safety, storage temperatures, shelf
+             life, receiving, and questions ABOUT supplier terms (delivery
+             days, minimums, whether a vendor delivers). Asking how a vendor
+             works is policy; asking to buy something is reorder.
 off_topic  - anything else, including marketing, staffing, and general chat.
 
 A statement like "we're almost out of pepperoni" is reorder, not inventory:

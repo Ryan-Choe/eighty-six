@@ -62,10 +62,16 @@ def load_chunks(kb_dir: Path = KB_DIR) -> list[Document]:
     for path in sorted(kb_dir.rglob("*.md")):
         doc_type = "supplier" if path.parent.name == "suppliers" else "policy"
         for chunk in _SPLITTER.split_text(path.read_text()):
+            title = chunk.metadata.get("doc_title", "")
+            section = chunk.metadata.get("section", title)
+            # the splitter strips headers OUT of the text, so "Minimum order
+            # is $250" carries no clue it's Roma's minimum -- three suppliers
+            # have lookalike sections and embeddings can't tell them apart.
+            # Re-inject the context so the chunk embeds (and reads) as whose
+            # terms it is.
+            chunk.page_content = f"{title} - {section}:\n{chunk.page_content}"
             chunk.metadata.update(
-                source=path.stem,
-                section=chunk.metadata.get("section", chunk.metadata.get("doc_title", "")),
-                doc_type=doc_type,
+                source=path.stem, section=section, doc_type=doc_type,
             )
             chunks.append(chunk)
     return chunks
@@ -85,8 +91,9 @@ def build_index() -> int:
     return len(chunks)
 
 
-def retrieve(query: str, doc_type: str, k: int = 4) -> list[Document]:
-    return _store().similarity_search(query, k=k, filter={"doc_type": doc_type})
+def retrieve(query: str, doc_type: str | None, k: int = 4) -> list[Document]:
+    flt = {"doc_type": doc_type} if doc_type else None
+    return _store().similarity_search(query, k=k, filter=flt)
 
 
 # Supplier display names -> KB file stems. Explicit map because

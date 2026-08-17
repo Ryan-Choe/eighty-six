@@ -91,7 +91,16 @@ def inventory_agent(state: AgentState) -> dict:
     llm = chat_model().bind_tools(INVENTORY_TOOLS)
     messages = [SystemMessage(content=prompts.INVENTORY_AGENT),
                 *repair_tool_history(state["messages"])]
-    return {"messages": [llm.invoke(messages)]}
+    response = llm.invoke(messages)
+    if response.response_metadata.get("stop_reason") == "max_tokens":
+        # a truncated response may carry tool_calls assembled from cut-off
+        # JSON; letting tools_condition route those to ToolNode would execute
+        # corrupted arguments. Replace with an honest answer instead.
+        log.warning("inventory_agent hit max_tokens; dropping truncated turn")
+        return {"messages": [AIMessage(
+            "I ran out of room answering that. Ask again, or narrow the question."
+        )]}
+    return {"messages": [response]}
 
 
 def deflect(state: AgentState) -> dict:
@@ -114,7 +123,13 @@ def policy_qa(state: AgentState) -> dict:
     the model deciding to look.
     """
     question = _last_user_text(state)
-    docs = rag.retrieve(question, "policy")
+    # whole-KB retrieval: "policy" at router granularity means "how things
+    # work here", which includes vendor terms -- the corpus is 20 chunks, so
+    # filtering by doc_type here would only hide the right answer
+    # k=6 of 20 chunks: three docs have similar "Minimums and fees" headings,
+    # and at k=4 the right supplier's section can lose the ranking to a
+    # lookalike from another doc (caught by the qa-reorder eval)
+    docs = rag.retrieve(question, None, k=6)
     excerpts = "\n\n".join(
         f"[{d.metadata['source']} § {d.metadata['section']}]\n{d.page_content}"
         for d in docs

@@ -11,8 +11,9 @@ MODEL = os.getenv("EIGHTYSIX_MODEL", "claude-opus-5")
 ROUTER_MODEL = os.getenv("EIGHTYSIX_ROUTER_MODEL", "claude-haiku-4-5")
 
 # claude-opus-5 rejects temperature/top_p/top_k with a 400, and thinking is on
-# by default — max_tokens caps thinking + response together, so keep it roomy
-MAX_TOKENS = 4096
+# by default — max_tokens caps thinking + response together. 16000 leaves room
+# for a long think plus a full answer; a tight cap truncates mid-sentence.
+MAX_TOKENS = 16000
 
 # Hard bound on one turn of the agent<->tools loop, passed at invoke time by
 # every interface (CLI now, Streamlit on Day 4). langgraph 1.x defaults to

@@ -16,12 +16,19 @@ from eightysix import db
 ALLOWED_ORDER_FIELDS = ("order_id", "timestamp", "items")
 
 
+class MalformedOrder(Exception):
+    """The raw order is missing fields or has non-numeric quantities."""
+
+
 def minimize_order(raw: dict) -> dict:
-    return {
-        "order_id": raw["order_id"],
-        "timestamp": raw["timestamp"],
-        "items": [{"menu_item": i["menu_item"], "qty": int(i["qty"])} for i in raw["items"]],
-    }
+    try:
+        return {
+            "order_id": raw["order_id"],
+            "timestamp": raw["timestamp"],
+            "items": [{"menu_item": i["menu_item"], "qty": int(i["qty"])} for i in raw["items"]],
+        }
+    except (KeyError, TypeError, ValueError) as e:
+        raise MalformedOrder(f"{type(e).__name__}: {e}") from e
 
 
 @traceable(name="apply_orders")
@@ -53,15 +60,21 @@ def apply_orders(conn: sqlite3.Connection, orders: list[dict]) -> dict:
             errors.append({"order_id": oid, "invalid_qty": bad_qty})
             continue
 
-        db.record_order(conn, oid, order["timestamp"], order["items"])
-        for item in order["items"]:
-            for ingredient_id, qty_per_item in recipe_map[item["menu_item"]]:
-                db.apply_depletion(
-                    conn, ingredient_id, qty_per_item * item["qty"], order["timestamp"], oid
-                )
-        applied.append(oid)
-
-    conn.commit()
+        # one transaction per order: a failure mid-order rolls back that order
+        # completely (no half-applied depletion, no lying ledger entry) and
+        # the rest of the batch still lands
+        try:
+            db.record_order(conn, oid, order["timestamp"], order["items"])
+            for item in order["items"]:
+                for ingredient_id, qty_per_item in recipe_map[item["menu_item"]]:
+                    db.apply_depletion(
+                        conn, ingredient_id, qty_per_item * item["qty"], order["timestamp"], oid
+                    )
+            conn.commit()
+            applied.append(oid)
+        except Exception as e:
+            conn.rollback()
+            errors.append({"order_id": oid, "failed": f"{type(e).__name__}: {e}"})
     return {
         "applied": len(applied),
         "skipped_duplicates": len(skipped),
@@ -73,8 +86,17 @@ def apply_orders(conn: sqlite3.Connection, orders: list[dict]) -> dict:
 def ingest_file(conn: sqlite3.Connection, path: str) -> dict:
     with open(path) as f:
         raw = json.load(f)
-    orders = [minimize_order(o) for o in raw["orders"]]
-    return apply_orders(conn, orders)
+    # minimize per order so one malformed order is reported, not fatal to the file
+    orders, malformed = [], []
+    for i, raw_order in enumerate(raw["orders"]):
+        try:
+            orders.append(minimize_order(raw_order))
+        except MalformedOrder as e:
+            malformed.append({"order_id": raw_order.get("order_id", f"#{i}"),
+                              "malformed": str(e)})
+    summary = apply_orders(conn, orders)
+    summary["errors"] = malformed + summary["errors"]
+    return summary
 
 
 if __name__ == "__main__":

@@ -22,6 +22,7 @@ from langgraph.types import Command  # noqa: E402
 
 from eightysix.config import RECURSION_LIMIT  # noqa: E402
 from eightysix.graph import build_graph  # noqa: E402
+from eightysix.redaction import redact  # noqa: E402
 
 DIM, BOLD, RESET = "\033[2m", "\033[1m", "\033[0m"
 
@@ -44,6 +45,7 @@ def ask(graph, question: str, thread_id: str) -> None:
         "metadata": {"thread_id": thread_id, "interface": "cli"},
     }
 
+    question = redact(question)  # before invoke: traces record graph inputs verbatim
     try:
         pending_po = _stream(graph, {"messages": [("user", question)]}, config)
         print()
