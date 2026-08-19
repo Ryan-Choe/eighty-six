@@ -1,4 +1,4 @@
-"""SQLite access for eighty-six. Every SQL string in the project lives in this file."""
+"""SQLite access for eighty-six. All SQL lives here, except two lookups price_po runs itself in purchasing.py."""
 
 import sqlite3
 from pathlib import Path

@@ -5,8 +5,7 @@
 A LangGraph agent for a small pizzeria (the fictional Sal's Slice House). It
 watches stock, answers the owner's questions with real numbers, drafts
 purchase orders against supplier terms, and stops for a human before any
-money moves. Built as a take-home challenge, pair-programmed with Claude —
-the design calls and the defense of them are mine.
+money moves.
 
 ## What it does
 
@@ -88,7 +87,7 @@ it happens inside the node at runtime, not at an edge.
 
 | field | written by | read by |
 |---|---|---|
-| `messages` | every node (append reducer) | everything; the UI streams from it |
+| `messages` | every answering node (append reducer) | everything; the UI streams from it |
 | `intent` | `route` | the branch picker |
 | `low_stock`, `candidates` | `draft_po` (cleared by `route` each turn) | the drafting prompt |
 | `po_draft` | `draft_po` (cleared by `route`, `send_po`, `cancel_po`) | approval card, `send_po` |
@@ -155,12 +154,14 @@ approval interrupt, and its resume after approval. Share links live in
 ## Repo map
 
 ```
-eightysix/       the package: graph, nodes, state, tools, prompts, db (all
+eightysix/       the package: graph, nodes, state, tools, prompts, db (the
                  SQL), rag, purchasing (all money math), ingest, redaction
 app.py / cli.py  two thin interfaces over the same graph
-data/seed        the world: ingredients, recipes, suppliers, one Friday rush
+data/seed        the world: ingredients, recipes, suppliers
+data/pos_orders  one Friday rush of POS orders
 data/kb          five markdown docs the vector store indexes
 evals/           datasets as JSON + evaluators + runners
 scripts/         seed, ingest, diagram regen, demo curation, day-1 smoke test
+docs/            setup notes, traps we hit, the demo script
 tests/           45 tests, no API keys needed
 ```

@@ -132,6 +132,7 @@ for role, text in st.session_state.history:
 
 if question := st.chat_input("Ask about stock, reorders, or kitchen policy"):
     question = redact(question)   # before invoke: traces record inputs verbatim
+    st.session_state.pending_po = None   # a new question abandons the paused draft; the card is dead
     st.session_state.history.append(("user", question))
     with st.chat_message("user"):
         st.markdown(_md(question))
@@ -155,11 +156,11 @@ if po := st.session_state.pending_po:
         )
         subtotal = f"${po['subtotal_cents'] / 100:.2f}"
         if po["meets_minimum"]:
-            st.markdown(f"**Total: {subtotal}**")
+            st.markdown(_md(f"**Total: {subtotal}**"))
         else:
-            st.markdown(f"**Total: {subtotal}** — under the "
-                        f"${po['min_order_cents'] / 100:.0f} minimum, expect a fee")
-        st.caption(po["expected_delivery"])
+            st.markdown(_md(f"**Total: {subtotal}** — under the "
+                            f"${po['min_order_cents'] / 100:.0f} minimum, expect a fee"))
+        st.caption(_md(po["expected_delivery"]))
 
         approve, reject = st.columns(2)
         decision = None
