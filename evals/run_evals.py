@@ -93,6 +93,7 @@ def graph_target(inputs: dict) -> dict:
                 answer = _flat(message.content)
                 break
         return {"answer": answer,
+                "intent": state.get("intent"),
                 "po_draft": state.get("po_draft"),
                 "citations": state.get("citations")}
     finally:

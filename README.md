@@ -127,7 +127,8 @@ with `make eval`. Routing is exact match: 8/8 on Haiku and 8/8 on Opus, which
 is why the router runs on Haiku. Inventory math is exact match against
 numbers verified by hand before they became the reference: 3/3. The
 full-graph set (answers judged pass/fail, citations checked against retrieved
-metadata, reorder decisions checked against the paused draft): 5/5, 3/3, 3/3.
+metadata, reorder decisions checked against the paused draft and the routed
+intent, so a crashed turn can't grade as a correct decline): 5/5, 3/3, 3/3.
 The first run scored 1/5 on answers and every failure was a real bug; the
 experiment history in LangSmith keeps that progression visible on purpose.
 

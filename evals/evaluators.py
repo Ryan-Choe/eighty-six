@@ -34,7 +34,13 @@ def reorder_decision(outputs: dict, reference_outputs: dict) -> dict:
     if reference_outputs.get("kind") not in ("reorder",):
         return {"key": "reorder_decision", "score": None}
     drafted = outputs.get("po_draft") is not None
-    ok = drafted == reference_outputs["should_draft"]
+    # a misroute or a crashed draft also ends with no po_draft. Requiring the
+    # reorder intent -- and, for declines, the pipeline's own "nothing to
+    # order" sentence -- keeps those failures from grading as a correct decline.
+    ok = (outputs.get("intent") == "reorder"
+          and drafted == reference_outputs["should_draft"])
+    if ok and not reference_outputs["should_draft"]:
+        ok = "nothing to order" in (outputs.get("answer") or "").lower()
     want_supplier = reference_outputs.get("supplier")
     if ok and drafted and want_supplier:
         ok = outputs["po_draft"].get("supplier_name") == want_supplier
