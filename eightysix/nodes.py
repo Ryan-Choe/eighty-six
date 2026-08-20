@@ -104,16 +104,12 @@ def inventory_agent(state: AgentState) -> dict:
 
 
 def deflect(state: AgentState) -> dict:
-    """Canned reply for off-topic turns and for paths that land on Day 3.
+    """Canned reply for off-topic turns. Until Day 3 the unbuilt intents
+    landed here too; today the router's off_topic is the only way in.
 
     No model call — the router already made the only decision needed.
     """
-    intent = state.get("intent")
-    if intent == "off_topic":
-        text = prompts.DEFLECT_OFF_TOPIC
-    else:
-        text = prompts.DEFLECT_NOT_BUILT.format(intent=intent)
-    return {"messages": [AIMessage(content=text)]}
+    return {"messages": [AIMessage(content=prompts.DEFLECT_OFF_TOPIC)]}
 
 
 def policy_qa(state: AgentState) -> dict:

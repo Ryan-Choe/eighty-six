@@ -1,4 +1,5 @@
-"""Every prompt in the project. One file to read to judge prompt quality."""
+"""Every prompt the graph sends. One file to read to judge prompt quality
+-- the eval judge's prompt lives with its evaluator in evals/evaluators.py."""
 
 ROUTER = """Classify the restaurant owner's message into exactly one intent.
 
@@ -82,9 +83,3 @@ Weigh when stock runs out against when each supplier can actually get product
 here (delivery days, order cutoffs, pickup-only limitations), then minimums
 and fees, then price. Cheapest is wrong if it can't arrive in time. State the
 arrival day and cite the terms that make it possible.{retry_note}"""
-
-# Deflect strings the graph still uses.
-DEFLECT_NOT_BUILT = (
-    "That path isn't available right now. I can answer questions about "
-    "current stock, draft reorders, and check food-safety policy."
-)

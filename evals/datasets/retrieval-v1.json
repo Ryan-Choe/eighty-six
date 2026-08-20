@@ -1,6 +1,6 @@
 {
   "dataset": "eighty-six-retrieval-v1",
-  "description": "Retrieval golden set: every query must surface its chunk, pinned to (source, section) metadata, at the production k=6. Pure retrieval -- no model calls in the target, so this is the one fully deterministic, zero-cost experiment. Queries probe the known failure classes: lookalike section headings across suppliers, paraphrases with no shared vocabulary, and the header-stripping regression the title re-injection fixed.",
+  "description": "Retrieval golden set: every query must surface its chunk, pinned to (source, section) metadata, at the production k=6. Pure retrieval -- no model calls in the target, so the experiment is fully deterministic and zero-cost. Queries probe the known failure classes: lookalike section headings across suppliers, paraphrases with no shared vocabulary, and the header-stripping regression the title re-injection fixed.",
   "examples": [
     {"inputs": {"query": "what's Roma Foods' minimum order?"},
      "outputs": {"source": "roma_foods", "section": "Minimums and fees",

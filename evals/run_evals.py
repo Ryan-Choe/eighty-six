@@ -56,7 +56,7 @@ def math_target(inputs: dict) -> dict:
 def retrieval_target(inputs: dict) -> dict:
     # the production path at the production k: policy_qa retrieves the whole
     # KB at k=6 (nodes.py says why), so that is what gets graded. No model
-    # calls -- this is the one fully deterministic experiment.
+    # calls anywhere -- fully deterministic, like the inventory-math run.
     docs = rag.retrieve(inputs["query"], None, k=6)
     return {"retrieved": [{"source": d.metadata["source"], "section": d.metadata["section"]}
                           for d in docs]}

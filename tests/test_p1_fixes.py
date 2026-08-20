@@ -1,5 +1,6 @@
-"""Pins for the four P1 fixes from the Day-2 review. Each test names the bug
-it guards against; if one fails, that bug is back."""
+"""Pins for the four P1 fixes from the Day-2 review, plus the later review
+fixes on the same ingestion seam. Each test names the bug it guards against;
+if one fails, that bug is back."""
 
 from datetime import datetime, timedelta
 from pathlib import Path

@@ -34,7 +34,7 @@
     "intent": "reorder"
    },
    "metadata": {
-    "note": "judgment call, documented in README: a statement of shortage routes to the useful action (restock), not a stock report"
+    "note": "judgment call, spelled out in the router prompt: a statement of shortage routes to the useful action (restock), not a stock report"
    }
   },
   {
