@@ -201,10 +201,17 @@ eightysix/       the package: graph, nodes, state, tools, prompts, db (the
                  SQL), rag, purchasing (all money math), ingest, redaction
 app.py / cli.py  two thin interfaces over the same graph
 data/seed        the world: ingredients, recipes, suppliers
-data/pos_orders  one Friday rush of POS orders
+data/pos_orders  one Friday rush of POS orders (all customer data synthetic)
 data/kb          five markdown docs the vector store indexes
 evals/           datasets as JSON + evaluators + runners
 scripts/         seed, ingest, diagram regen, demo curation, day-1 smoke test
 docs/            setup notes and the traps we hit
 tests/           58 tests, no API keys needed
 ```
+
+## License
+
+None, on purpose. This is a hiring take-home made public to be read, not a
+library. No license is granted to use, copy, modify, or redistribute the
+code; GitHub's terms let you view and fork it on GitHub, and that is the
+extent of it.
