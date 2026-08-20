@@ -1,4 +1,4 @@
-"""Run the three experiments. Every target builds fresh state per example --
+"""Run the five experiments. Every target builds fresh state per example --
 evals never touch the demo database."""
 
 import json
@@ -20,11 +20,12 @@ os.environ.setdefault("EIGHTYSIX_DEMO_NOW", "Friday August 14, 09:30 PM")
 from langsmith import evaluate  # noqa: E402
 
 import eightysix.nodes as nodes  # noqa: E402
-from eightysix import db  # noqa: E402
+from eightysix import db, rag  # noqa: E402
 from eightysix.graph import build_graph  # noqa: E402
 from eightysix.ingest import apply_orders, minimize_order  # noqa: E402
 from evals.evaluators import (  # noqa: E402
-    answer_quality, cited_expected_doc, correct_route, reorder_decision, stock_exact,
+    answer_quality, cited_expected_doc, correct_route, reorder_decision,
+    retrieved_expected_chunk, stock_exact,
 )
 
 REPO = Path(__file__).resolve().parent.parent
@@ -50,6 +51,15 @@ def math_target(inputs: dict) -> dict:
         "stock_after": {n: db.get_stock(conn, n)["on_hand"] for n in tracked},
         "low_stock": [i["name"] for i in result["low_stock"]],
     }
+
+
+def retrieval_target(inputs: dict) -> dict:
+    # the production path at the production k: policy_qa retrieves the whole
+    # KB at k=6 (nodes.py says why), so that is what gets graded. No model
+    # calls -- this is the one fully deterministic experiment.
+    docs = rag.retrieve(inputs["query"], None, k=6)
+    return {"retrieved": [{"source": d.metadata["source"], "section": d.metadata["section"]}
+                          for d in docs]}
 
 
 def _fixture_db(kind: str, path: Path):
@@ -113,7 +123,10 @@ if __name__ == "__main__":
     evaluate(math_target, data="eighty-six-inventory-math-v1",
              evaluators=[stock_exact],
              experiment_prefix="inventory-math", max_concurrency=1)
-    evaluate(graph_target, data="eighty-six-qa-reorder-v1",
+    evaluate(retrieval_target, data="eighty-six-retrieval-v1",
+             evaluators=[retrieved_expected_chunk],
+             experiment_prefix="retrieval", max_concurrency=1)
+    evaluate(graph_target, data="eighty-six-qa-reorder-v2",
              evaluators=[answer_quality, cited_expected_doc, reorder_decision],
              experiment_prefix="qa-reorder", max_concurrency=1)
-    print("three experiments submitted -- see the Experiments tab per dataset")
+    print("five experiments submitted -- see the Experiments tab per dataset")

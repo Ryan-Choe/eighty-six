@@ -91,7 +91,11 @@ def build_index() -> int:
     return len(chunks)
 
 
-def retrieve(query: str, doc_type: str | None, k: int = 4) -> list[Document]:
+def retrieve(query: str, doc_type: str | None, k: int) -> list[Document]:
+    # no default k on purpose: the right k is a call-site decision with an
+    # eval behind it. Whole-KB queries run at 6 (policy_qa says why); the old
+    # default of 4 was just the library's, and 4 is the k the lookalike-
+    # sections bug lived at.
     flt = {"doc_type": doc_type} if doc_type else None
     return _store().similarity_search(query, k=k, filter=flt)
 

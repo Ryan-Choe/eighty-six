@@ -22,6 +22,18 @@ def stock_exact(outputs: dict, reference_outputs: dict) -> dict:
     return {"key": "stock_exact", "score": ok}
 
 
+def retrieved_expected_chunk(outputs: dict, reference_outputs: dict) -> dict:
+    # retrieval recall at the production k -- no model anywhere. The comment
+    # carries the rank, so a chunk that still passes but is slipping down the
+    # ranking is visible in LangSmith before it becomes a miss.
+    want = {"source": reference_outputs["source"],
+            "section": reference_outputs["section"]}
+    got = outputs.get("retrieved") or []
+    rank = next((i + 1 for i, c in enumerate(got) if c == want), None)
+    return {"key": "retrieved_expected_chunk", "score": rank is not None,
+            "comment": f"rank {rank} of {len(got)}" if rank else "not in the retrieved set"}
+
+
 def cited_expected_doc(outputs: dict, reference_outputs: dict) -> dict:
     expected = reference_outputs.get("expected_doc")
     if not expected:

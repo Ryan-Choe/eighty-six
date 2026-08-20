@@ -1,6 +1,6 @@
 {
-  "dataset": "eighty-six-qa-reorder-v1",
-  "description": "Full-graph: RAG answers with citations, one honesty case, reorder judgment graded on the paused po_draft.",
+  "dataset": "eighty-six-qa-reorder-v2",
+  "description": "Full-graph: RAG answers with citations, one honesty case, one agent+ToolNode loop case, reorder judgment graded on the paused po_draft. v2 = v1 plus the tool-loop case (the remote v1 is immutable by design, same reason routing went to v2).",
   "examples": [
     {"inputs": {"message": "what temperature does the walk-in need to hold?", "fixture": "seeded"},
      "outputs": {"kind": "rag_qa", "expected_facts": ["41F or 5C, stated as at-or-below"], "expected_doc": "food_safety_storage"}},
@@ -10,6 +10,9 @@
      "outputs": {"kind": "rag_qa", "expected_facts": ["no - pickup only at the warehouse counter"], "expected_doc": "valco_cash_carry"}},
     {"inputs": {"message": "what's our gluten-free cross-contamination policy?", "fixture": "seeded"},
      "outputs": {"kind": "rag_qa_honesty", "expected_facts": ["must say the policy docs do not cover this; must NOT invent a policy"], "expected_doc": null}},
+    {"inputs": {"message": "exactly how much fresh mozzarella do we have on hand right now?", "fixture": "friday_rush"},
+     "outputs": {"kind": "inventory_tools", "expected_facts": ["1160g (equivalently 1.16kg) of fresh mozzarella on hand"], "expected_doc": null,
+       "note": "the one case that runs the agent+ToolNode loop end-to-end: 2000g seed - 840g Friday depletion = 1160g, graded by the judge against the exact number"}},
     {"inputs": {"message": "we got slammed, draft a reorder for whatever's low", "fixture": "friday_rush"},
      "outputs": {"kind": "reorder", "should_draft": true, "supplier": "Roma Foods",
        "note": "Friday 9:30 PM pinned clock: Roma's Saturday truck beats Valco pickup; cheaper Valco is the trap"}},
