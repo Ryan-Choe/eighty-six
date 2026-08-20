@@ -116,21 +116,23 @@ it happens inside the node at runtime, not at an edge.
 | 1 | Owner-facing copilot | A CRUD inventory tracker | Delete the LLM from a tracker and nothing breaks. Here the judgment calls are the product |
 | 2 | Order ingestion outside the graph | A graph node for order batches | Nobody chats a JSON file. The graph is a decision surface, not a job runner |
 | 3 | Explicit agent + ToolNode loop | `create_react_agent` | ~20 extra lines and the loop shows up in the diagram above |
-| 4 | `interrupt()` before `send_po` | Fully autonomous ordering | Money leaves the building. Durable pause/resume is the reason to use LangGraph at all |
-| 5 | The approval click is consumed before the resume runs | Resuming inline while the card's buttons are still live | An aborted resume can never replay, so no path double-sends. A lost receipt beats a doubled order |
-| 6 | The model never does arithmetic | LLM computes quantities and totals | `price_po()` re-prices every draft from the catalog; model output is a proposal |
-| 7 | SQL for live state, RAG for prose | RAG over everything | If it fits in a WHERE clause it doesn't belong in a vector store. Columns win on conflict |
-| 8 | Retrieval is a pipeline step in `policy_qa` / `draft_po` | A retrieval tool the agent calls | Grounding shouldn't depend on the model deciding to look, so retrieval runs before the model does |
-| 9 | Citations copied from chunk metadata | Parsing cites out of the model's prose | A cite parsed from prose can be invented; the metadata list is just what came back from the store. The eval and both UIs read the same field |
-| 10 | Every `retrieve()` call picks its k explicitly | A module-level default k | The library default (4) is the k the lookalike-sections bug lived at. 6 has an eval behind it; 3 is sized to one supplier's terms sheet |
-| 11 | Local MiniLM embeddings | A hosted embedding API | You need two API keys to run this, not three |
-| 12 | Mostly deterministic evaluators | LLM-as-judge for everything | Exact match where an exact answer exists; the judge only grades prose, and only pass/fail |
-| 13 | Datasets are versioned (`routing-v2`, `qa-reorder-v2`), never mutated | Editing the remote dataset in place | Experiments stay comparable across runs, and the 1/5 first run stays visible in the history |
-| 14 | Failure branches tested with a fake model at the `chat_model` seam | Stubbing whole nodes, or leaving those branches untested | The retry loop, the router fallback, and the truncation guard are real control flow. The fakes let tests run them without API keys |
-| 15 | Redaction before `graph.invoke()` | A redaction node in the graph | Traces and checkpoints record graph inputs verbatim, so an in-graph redactor leaks by design |
-| 16 | Haiku router, Opus everywhere else | Opus for routing too | The routing eval scores 8/8 on both models. Same accuracy, ~5x cheaper per route |
-| 17 | `InMemorySaver` checkpointer | `SqliteSaver` | One less dependency for a demo. Durable threads are on the improve list |
-| 18 | Makefile, no Docker | A Dockerfile | The brief says "or". A multi-GB torch image the reviewer must mount keys into buys nothing over `make setup` |
+| 4 | `repair_tool_history` runs on every model input, splicing in place | Repairing only the last message, or only after a visible error | A checkpointer makes partial failures durable: a dangling tool call is saved and replayed into every later turn, and the API accepts its result only immediately after the call |
+| 5 | `interrupt()` before `send_po` | Fully autonomous ordering | Money leaves the building. Durable pause/resume is the reason to use LangGraph at all |
+| 6 | Nothing runs above the `interrupt()` in `human_approval` | Doing real work in the node before pausing | On resume the node re-runs from its first line, so anything above the interrupt happens twice. Three lines, nothing to double |
+| 7 | The approval click is consumed before the resume runs | Resuming inline while the card's buttons are still live | An aborted resume can never replay, so no path double-sends. A lost receipt beats a doubled order |
+| 8 | The model never does arithmetic | LLM computes quantities and totals | `price_po()` re-prices every draft from the catalog; model output is a proposal |
+| 9 | SQL for live state, RAG for prose | RAG over everything | If it fits in a WHERE clause it doesn't belong in a vector store. Columns win on conflict |
+| 10 | Retrieval is a pipeline step in `policy_qa` / `draft_po` | A retrieval tool the agent calls | Grounding shouldn't depend on the model deciding to look, so retrieval runs before the model does |
+| 11 | Citations copied from chunk metadata | Parsing cites out of the model's prose | A cite parsed from prose can be invented; the metadata list is just what came back from the store. The eval and both UIs read the same field |
+| 12 | Every `retrieve()` call picks its k explicitly | A module-level default k | The library default (4) is the k the lookalike-sections bug lived at. 6 has an eval behind it; 3 is sized to one supplier's terms sheet |
+| 13 | Local MiniLM embeddings | A hosted embedding API | You need two API keys to run this, not three |
+| 14 | Mostly deterministic evaluators | LLM-as-judge for everything | Exact match where an exact answer exists; the judge only grades prose, and only pass/fail |
+| 15 | Datasets are versioned (`routing-v2`, `qa-reorder-v2`), never mutated | Editing the remote dataset in place | Experiments stay comparable across runs, and the 1/5 first run stays visible in the history |
+| 16 | Failure branches tested with a fake model at the `chat_model` seam | Stubbing whole nodes, or leaving those branches untested | The retry loop, the router fallback, and the truncation guard are real control flow. The fakes let tests run them without API keys |
+| 17 | Redaction before `graph.invoke()` | A redaction node in the graph | Traces and checkpoints record graph inputs verbatim, so an in-graph redactor leaks by design |
+| 18 | Haiku router, Opus everywhere else | Opus for routing too | The routing eval scores 8/8 on both models. Same accuracy, ~5x cheaper per route |
+| 19 | `InMemorySaver` checkpointer | `SqliteSaver` | One less dependency for a demo. Durable threads are on the improve list |
+| 20 | Makefile, no Docker | A Dockerfile | The brief says "or". A multi-GB torch image the reviewer must mount keys into buys nothing over `make setup` |
 
 Three things the evals changed after the fact:
 
@@ -183,6 +185,9 @@ approval interrupt, and its resume after approval. Share links live in
 - Retrieval score thresholds: similarity search always returns k chunks, so
   "nothing relevant" isn't detectable — the honesty case's retrieval goes
   ungraded, and every answer carries six citations however thin the match.
+- Retrieval as a traced span: `similarity_search` is a plain method call, so
+  a trace shows the node and the assembled excerpts but never what was
+  searched or how it ranked. Wrap it `@traceable`, like ingestion already is.
 - Multi-supplier orders: one PO per draft right now, so a mixed shortage
   bundles into one vendor or says what it left out.
 - A way to ask "what did I already order?" — sent POs are written but nothing
