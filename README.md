@@ -17,6 +17,17 @@ money moves.
   the model picks a supplier using retrieved terms, code re-prices the pick,
   and a LangGraph interrupt holds it until a human clicks approve.
 
+```mermaid
+flowchart LR
+    compute["code computes<br>the options"] --> pick(["model picks<br>a supplier"])
+    pick --> price["code re-prices<br>from the catalog"]
+    price --> gate{{"human<br>approves"}}
+    gate --> sent["PO sent"]
+    classDef default fill:#f2f0ff,color:#1f2430
+    classDef judgment fill:#bfb6fc,color:#1f2430
+    class pick,gate judgment
+```
+
 ## Quickstart
 
 ```
@@ -26,9 +37,13 @@ make seed         # builds the SQLite db and the Chroma index
 make run          # Streamlit UI  (or: make cli)
 ```
 
-Try these, in order: click **Simulate Friday rush**, then ask *"do we have
-enough fresh mozzarella for the weekend?"*, then *"draft a reorder for
-whatever's low"* and approve it. After `make seed`, `make test` runs 58 tests with no API keys.
+Then, in order:
+
+1. Click **Simulate Friday rush** — the 86 board flips to two flagged items.
+2. Ask *"do we have enough fresh mozzarella for the weekend?"*
+3. Ask *"draft a reorder for whatever's low"* — and approve it.
+
+After `make seed`, `make test` runs 58 tests with no API keys.
 
 ## The graph
 
@@ -71,9 +86,9 @@ graph TD;
 	deflect --> __end__;
 	policy_qa --> __end__;
 	send_po --> __end__;
-	classDef default fill:#f2f0ff,line-height:1.2
-	classDef first fill-opacity:0
-	classDef last fill:#bfb6fc
+	classDef default fill:#f2f0ff,color:#1f2430,line-height:1.2
+	classDef first fill:#bfb6fc,color:#1f2430
+	classDef last fill:#bfb6fc,color:#1f2430
 ```
 
 <!-- graph:end -->
@@ -85,7 +100,7 @@ it happens inside the node at runtime, not at an edge.
 
 ### State
 
-| field | written by | read by |
+| Field | Written by | Read by |
 |---|---|---|
 | `messages` | every answering node (append reducer) | everything; the UI streams from it |
 | `intent` | `route` | the branch picker |
@@ -117,34 +132,33 @@ it happens inside the node at runtime, not at an edge.
 | 17 | `InMemorySaver` checkpointer | `SqliteSaver` | One less dependency for a demo. Durable threads are on the improve list |
 | 18 | Makefile, no Docker | A Dockerfile | The brief says "or". A multi-GB torch image the reviewer must mount keys into buys nothing over `make setup` |
 
-Three things the evals changed after the fact: the usage tool divided by the
-7-day window instead of days-with-data and reported 9.7 days of mozzarella
-cover when the truth was 1.4; the markdown splitter strips headers out of
-chunk text, so Roma's "$250 minimum" chunk didn't contain the word Roma and
-three suppliers looked identical to the embeddings (fixed by re-injecting the
-doc title into each chunk); and the supplier tradeoff turned out to be
-calendar-dependent, so the demo runs on a pinned clock (`EIGHTYSIX_DEMO_NOW`)
-— on a real Sunday the agent picked the "wrong" supplier and was right to.
+Three things the evals changed after the fact:
+
+| What the eval caught | The fix |
+|---|---|
+| The usage tool divided by the 7-day window instead of days-with-data: 9.7 days of mozzarella cover reported, 1.4 true | Divide by days that have sales, and return `data_days` so the model caveats thin history |
+| The markdown splitter strips headers, so Roma's "$250 minimum" chunk didn't contain the word Roma — three suppliers embedded as lookalikes | Re-inject the doc title and section into each chunk's text at ingest |
+| The supplier tradeoff is calendar-dependent — on a real Sunday the agent picked the "wrong" supplier and was right to | Pin the demo clock (`EIGHTYSIX_DEMO_NOW`). Determinism comes from the world, not the sampler |
 
 ## Evals
 
 Four datasets, 32 examples, committed as JSON in `evals/datasets/` and run
-with `make eval`. Routing is exact match: 8/8 on Haiku and 8/8 on Opus, which
-is why the router runs on Haiku. Inventory math is exact match against
-numbers verified by hand before they became the reference: 3/3. Retrieval is
-a 13-query golden set graded at the production k — each query must surface
-its chunk, pinned to `(source, section)` metadata, with the rank surfaced as
-a comment so a slipping chunk is visible before it becomes a miss: 13/13. The
-queries probe the failure classes this project actually hit (lookalike
-section headings across suppliers, paraphrases sharing no vocabulary with the
-chunk, the header-stripping regression), and the same JSON runs keyless as a
-test, so a retrieval regression fails the build, not just an experiment. The
-full-graph set (answers judged pass/fail, citations checked against retrieved
-metadata, reorder decisions checked against the paused draft and the routed
-intent, so a crashed turn can't grade as a correct decline): 6/6, 3/3, 3/3 —
-including one case that runs the agent + tool loop end-to-end, on a stock
-number that exists only behind `get_stock`. The v1 dataset's first run scored
-1/5 on answers and every failure was a real bug; the experiment history in
+with `make eval`. The retrieval set also runs keyless under `make test`, so
+a retrieval regression fails the build, not just an experiment.
+
+| Dataset | N | Graded by | Score |
+|---|---|---|---|
+| `routing-v2` | 8 | exact match on the routed intent, run on Haiku *and* Opus | 8/8 · 8/8 — why the router runs on Haiku |
+| `inventory-math-v1` | 3 | exact match against numbers verified by hand before they became the reference | 3/3 |
+| `retrieval-v1` | 13 | golden chunk in the top-6 at the production k, pinned to `(source, section)` metadata; rank attached, so a slipping chunk is visible before it misses | 13/13 |
+| `qa-reorder-v2` | 8 | judge on answers (pass/fail only), citations vs retrieved metadata, reorder decision vs the paused draft *and* the routed intent — a crashed turn can't grade as a correct decline | 6/6 · 3/3 · 3/3 |
+
+The retrieval queries probe the failure classes this project actually hit:
+lookalike section headings across suppliers, paraphrases sharing no
+vocabulary with the chunk, the header-stripping regression. The full-graph
+set includes one case that runs the agent + tool loop end-to-end, on a stock
+number that exists only behind `get_stock`. And the v1 set's first run scored
+1/5 on answers — every failure was a real bug; the experiment history in
 LangSmith keeps that progression visible on purpose.
 
 ## LangSmith
