@@ -28,7 +28,7 @@ make run          # Streamlit UI  (or: make cli)
 
 Try these, in order: click **Simulate Friday rush**, then ask *"do we have
 enough fresh mozzarella for the weekend?"*, then *"draft a reorder for
-whatever's low"* and approve it. After `make seed`, `make test` runs 45 tests with no API keys.
+whatever's low"* and approve it. After `make seed`, `make test` runs 58 tests with no API keys.
 
 ## The graph
 
@@ -89,7 +89,7 @@ it happens inside the node at runtime, not at an edge.
 |---|---|---|
 | `messages` | every answering node (append reducer) | everything; the UI streams from it |
 | `intent` | `route` | the branch picker |
-| `low_stock`, `candidates` | `draft_po` (cleared by `route` each turn) | the drafting prompt |
+| `low_stock`, `candidates` | `draft_po` (cleared by `route` each turn) | nothing at runtime — kept so traces show the options the model chose from |
 | `po_draft` | `draft_po` (cleared by `route`, `send_po`, `cancel_po`) | approval card, `send_po` |
 | `approved` | `human_approval`, from the resume payload | the send/cancel branch |
 | `citations` | `policy_qa`, `draft_po` (reset each turn) | the UI's sources list |
@@ -100,16 +100,22 @@ it happens inside the node at runtime, not at an edge.
 |---|---|---|---|
 | 1 | Owner-facing copilot | A CRUD inventory tracker | Delete the LLM from a tracker and nothing breaks. Here the judgment calls are the product |
 | 2 | Order ingestion outside the graph | A graph node for order batches | Nobody chats a JSON file. The graph is a decision surface, not a job runner |
-| 3 | The model never does arithmetic | LLM computes quantities and totals | `price_po()` re-prices every draft from the catalog; model output is a proposal |
-| 4 | SQL for live state, RAG for prose | RAG over everything | If it fits in a WHERE clause it doesn't belong in a vector store. Columns win on conflict |
-| 5 | Explicit agent + ToolNode loop | `create_react_agent` | ~20 extra lines and the loop shows up in the diagram above |
-| 6 | `interrupt()` before `send_po` | Fully autonomous ordering | Money leaves the building. Durable pause/resume is the reason to use LangGraph at all |
-| 7 | Redaction before `graph.invoke()` | A redaction node in the graph | Traces and checkpoints record graph inputs verbatim, so an in-graph redactor leaks by design |
-| 8 | Mostly deterministic evaluators | LLM-as-judge for everything | Exact match where an exact answer exists; the judge only grades prose, and only pass/fail |
-| 9 | `InMemorySaver` checkpointer | `SqliteSaver` | One less dependency for a demo. Durable threads are on the improve list |
-| 10 | Local MiniLM embeddings | A hosted embedding API | You need two API keys to run this, not three |
-| 11 | Haiku router, Opus everywhere else | Opus for routing too | The routing eval scores 8/8 on both models. Same accuracy, ~5x cheaper per route |
-| 12 | Makefile, no Docker | A Dockerfile | The brief says "or". A multi-GB torch image the reviewer must mount keys into buys nothing over `make setup` |
+| 3 | Explicit agent + ToolNode loop | `create_react_agent` | ~20 extra lines and the loop shows up in the diagram above |
+| 4 | `interrupt()` before `send_po` | Fully autonomous ordering | Money leaves the building. Durable pause/resume is the reason to use LangGraph at all |
+| 5 | The approval click is consumed before the resume runs | Resuming inline while the card's buttons are still live | An aborted resume can never replay, so no path double-sends. A lost receipt beats a doubled order |
+| 6 | The model never does arithmetic | LLM computes quantities and totals | `price_po()` re-prices every draft from the catalog; model output is a proposal |
+| 7 | SQL for live state, RAG for prose | RAG over everything | If it fits in a WHERE clause it doesn't belong in a vector store. Columns win on conflict |
+| 8 | Retrieval is a pipeline step in `policy_qa` / `draft_po` | A retrieval tool the agent calls | Grounding shouldn't depend on the model deciding to look, so retrieval runs before the model does |
+| 9 | Citations copied from chunk metadata | Parsing cites out of the model's prose | A cite parsed from prose can be invented; the metadata list is just what came back from the store. The eval and both UIs read the same field |
+| 10 | Every `retrieve()` call picks its k explicitly | A module-level default k | The library default (4) is the k the lookalike-sections bug lived at. 6 has an eval behind it; 3 is sized to one supplier's terms sheet |
+| 11 | Local MiniLM embeddings | A hosted embedding API | You need two API keys to run this, not three |
+| 12 | Mostly deterministic evaluators | LLM-as-judge for everything | Exact match where an exact answer exists; the judge only grades prose, and only pass/fail |
+| 13 | Datasets are versioned (`routing-v2`, `qa-reorder-v2`), never mutated | Editing the remote dataset in place | Experiments stay comparable across runs, and the 1/5 first run stays visible in the history |
+| 14 | Failure branches tested with a fake model at the `chat_model` seam | Stubbing whole nodes, or leaving those branches untested | The retry loop, the router fallback, and the truncation guard are real control flow. The fakes let tests run them without API keys |
+| 15 | Redaction before `graph.invoke()` | A redaction node in the graph | Traces and checkpoints record graph inputs verbatim, so an in-graph redactor leaks by design |
+| 16 | Haiku router, Opus everywhere else | Opus for routing too | The routing eval scores 8/8 on both models. Same accuracy, ~5x cheaper per route |
+| 17 | `InMemorySaver` checkpointer | `SqliteSaver` | One less dependency for a demo. Durable threads are on the improve list |
+| 18 | Makefile, no Docker | A Dockerfile | The brief says "or". A multi-GB torch image the reviewer must mount keys into buys nothing over `make setup` |
 
 Three things the evals changed after the fact: the usage tool divided by the
 7-day window instead of days-with-data and reported 9.7 days of mozzarella
@@ -122,15 +128,24 @@ calendar-dependent, so the demo runs on a pinned clock (`EIGHTYSIX_DEMO_NOW`)
 
 ## Evals
 
-Three datasets, 18 examples, committed as JSON in `evals/datasets/` and run
+Four datasets, 32 examples, committed as JSON in `evals/datasets/` and run
 with `make eval`. Routing is exact match: 8/8 on Haiku and 8/8 on Opus, which
 is why the router runs on Haiku. Inventory math is exact match against
-numbers verified by hand before they became the reference: 3/3. The
+numbers verified by hand before they became the reference: 3/3. Retrieval is
+a 13-query golden set graded at the production k — each query must surface
+its chunk, pinned to `(source, section)` metadata, with the rank surfaced as
+a comment so a slipping chunk is visible before it becomes a miss: 13/13. The
+queries probe the failure classes this project actually hit (lookalike
+section headings across suppliers, paraphrases sharing no vocabulary with the
+chunk, the header-stripping regression), and the same JSON runs keyless as a
+test, so a retrieval regression fails the build, not just an experiment. The
 full-graph set (answers judged pass/fail, citations checked against retrieved
 metadata, reorder decisions checked against the paused draft and the routed
-intent, so a crashed turn can't grade as a correct decline): 5/5, 3/3, 3/3.
-The first run scored 1/5 on answers and every failure was a real bug; the
-experiment history in LangSmith keeps that progression visible on purpose.
+intent, so a crashed turn can't grade as a correct decline): 6/6, 3/3, 3/3 —
+including one case that runs the agent + tool loop end-to-end, on a stock
+number that exists only behind `get_stock`. The v1 dataset's first run scored
+1/5 on answers and every failure was a real bug; the experiment history in
+LangSmith keeps that progression visible on purpose.
 
 ## LangSmith
 
@@ -143,9 +158,17 @@ approval interrupt, and its resume after approval. Share links live in
 
 - Demand forecasting: reorders react to a threshold today; even a 7-day
   moving average would let them anticipate the weekend instead.
+- Conversation context: the router and retrieval see only the last message,
+  so a follow-up like *"and Valco's?"* stands alone. Threading a short
+  window through them without breaking the exact-match routing eval is the
+  next real design problem.
+- Validate the model's `expected_delivery` claim against the KB before it
+  reaches the approval card — it's the one model-authored field the human's
+  decision actually hinges on.
 - A real POS webhook with idempotency keys, replacing batch JSON files.
-- Retrieval-stage evals (recall@k against a golden query set) — today only
-  end answers are graded, so a retrieval regression shows up indirectly.
+- Retrieval score thresholds: similarity search always returns k chunks, so
+  "nothing relevant" isn't detectable — the honesty case's retrieval goes
+  ungraded, and every answer carries six citations however thin the match.
 - Multi-supplier orders: one PO per draft right now, so a mixed shortage
   bundles into one vendor or says what it left out.
 - A way to ask "what did I already order?" — sent POs are written but nothing
@@ -163,6 +186,6 @@ data/pos_orders  one Friday rush of POS orders
 data/kb          five markdown docs the vector store indexes
 evals/           datasets as JSON + evaluators + runners
 scripts/         seed, ingest, diagram regen, demo curation, day-1 smoke test
-docs/            setup notes, traps we hit, the demo script
-tests/           45 tests, no API keys needed
+docs/            setup notes and the traps we hit
+tests/           58 tests, no API keys needed
 ```

@@ -16,11 +16,13 @@ Traces (public, read-only):
   https://smith.langchain.com/public/3be41de3-ad42-437b-aef4-f54c16fdf620/r
 
 Datasets with their experiment history (the 1/5 -> 5/5 progression is in
-qa-reorder on purpose):
+qa-reorder v1 on purpose):
 
 - Routing (8/8 on Haiku and on Opus):
   https://smith.langchain.com/public/18e83381-6ad2-4495-a27e-5e0e24f5f3ac/d
-- QA + reorder judgment:
+- QA + reorder judgment (v1, with the early failure history; v2 adds the
+  agent+ToolNode loop case -- remote datasets are immutable by design here,
+  same reason routing is v2):
   https://smith.langchain.com/public/e4627628-1376-456e-b30b-1fdda9854393/d
 - Inventory math:
   https://smith.langchain.com/public/ea5276e9-aa7a-4e10-8322-7f846dc5d6d9/d
@@ -72,7 +74,10 @@ qa-reorder on purpose):
 
 ## Running the evals
 
-`make eval` uploads datasets (idempotent) and runs three experiments. Targets
-never touch `pizzeria.db` — each example builds its own throwaway database.
-The qa-reorder target runs the full graph to the interrupt and grades the
-paused draft, so no eval ever "approves" anything.
+`make eval` uploads datasets (idempotent) and runs five experiments: routing
+on both models, inventory math, retrieval, and the full graph. Targets never
+touch `pizzeria.db` — each example builds its own throwaway database. The
+qa-reorder target runs the full graph to the interrupt and grades the paused
+draft, so no eval ever "approves" anything. The retrieval target makes no
+model calls at all — it grades `rag.retrieve` at the production k, and the
+same golden JSON runs keyless in `make test`.
