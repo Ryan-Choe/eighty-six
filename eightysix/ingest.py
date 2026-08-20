@@ -17,7 +17,22 @@ ALLOWED_ORDER_FIELDS = ("order_id", "timestamp", "items")
 
 
 class MalformedOrder(Exception):
-    """The raw order is missing fields or has non-numeric quantities."""
+    """The raw order is missing fields or has non-whole quantities."""
+
+
+def _whole_qty(value) -> int:
+    # The reject-don't-clamp rule from apply_orders applies here too: int()
+    # would silently turn a POS export's 2.9 into 2, so a fractional quantity
+    # is malformed, not roundable. (bool is an int subclass; a JSON true here
+    # is garbage, not a quantity of one.)
+    if isinstance(value, bool):
+        raise ValueError(f"quantity must be a number, got {value!r}")
+    if isinstance(value, int):
+        return value
+    qty = int(value)           # floats truncate; garbage strings raise here
+    if qty != float(value):    # ...and the truncated ones get rejected here
+        raise ValueError(f"quantity {value!r} is not a whole number")
+    return qty
 
 
 def minimize_order(raw: dict) -> dict:
@@ -25,9 +40,11 @@ def minimize_order(raw: dict) -> dict:
         return {
             "order_id": raw["order_id"],
             "timestamp": raw["timestamp"],
-            "items": [{"menu_item": i["menu_item"], "qty": int(i["qty"])} for i in raw["items"]],
+            "items": [{"menu_item": i["menu_item"], "qty": _whole_qty(i["qty"])} for i in raw["items"]],
         }
-    except (KeyError, TypeError, ValueError) as e:
+    except (KeyError, TypeError, ValueError, OverflowError) as e:
+        # OverflowError: python's json parser accepts Infinity; int() and
+        # float() both refuse it
         raise MalformedOrder(f"{type(e).__name__}: {e}") from e
 
 
@@ -112,8 +129,10 @@ def ingest_file(conn: sqlite3.Connection, path: str) -> dict:
         try:
             orders.append(minimize_order(raw_order))
         except MalformedOrder as e:
-            malformed.append({"order_id": raw_order.get("order_id", f"#{i}"),
-                              "malformed": str(e)})
+            # raw_order may not even be a dict -- the report must not crash
+            # on the same garbage the parse just rejected
+            oid = raw_order.get("order_id", f"#{i}") if isinstance(raw_order, dict) else f"#{i}"
+            malformed.append({"order_id": oid, "malformed": str(e)})
     if orders:
         orders = _rebase_timestamps(orders)
     summary = apply_orders(conn, orders)

@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from eightysix import db
-from eightysix.ingest import apply_orders
+from eightysix.ingest import MalformedOrder, apply_orders, ingest_file, minimize_order
 
 SEED_DIR = Path(__file__).resolve().parent.parent / "data" / "seed"
 
@@ -102,6 +102,45 @@ def test_rejected_order_can_be_fixed_and_replayed(conn):
     result = apply_orders(conn, [order("Q-3", [{"menu_item": "Margherita", "qty": 1}])])
     assert result["applied"] == 1
     assert db.get_stock(conn, "fresh mozzarella")["on_hand"] == 2000 - 150
+
+
+# --- review fix: fractional quantities were truncated, not rejected ---
+
+def test_fractional_qty_is_malformed_not_truncated():
+    # int() would quietly turn 2.9 into 2 -- the reject-don't-clamp rule
+    # has to hold at minimize time too, before the apply gate ever sees it
+    with pytest.raises(MalformedOrder):
+        minimize_order(order("F-1", [{"menu_item": "Margherita", "qty": 2.9}]))
+
+
+def test_boolean_qty_is_malformed():
+    with pytest.raises(MalformedOrder):
+        minimize_order(order("F-2", [{"menu_item": "Margherita", "qty": True}]))
+
+
+def test_infinite_qty_is_malformed_not_fatal():
+    # python's json parser accepts Infinity; without OverflowError in the
+    # except tuple this would crash the whole batch instead of one order
+    with pytest.raises(MalformedOrder):
+        minimize_order(order("F-3", [{"menu_item": "Margherita", "qty": float("inf")}]))
+
+
+def test_whole_number_qtys_still_normalize():
+    m = minimize_order(order("F-4", [{"menu_item": "Margherita", "qty": 3.0},
+                                     {"menu_item": "Margherita", "qty": "2"}]))
+    assert [i["qty"] for i in m["items"]] == [3, 2]
+
+
+def test_garbage_order_entry_is_reported_not_fatal(conn, tmp_path):
+    # a non-dict entry in the orders list must cost one error line, not the
+    # file -- the valid order behind it still applies
+    import json
+    batch = {"orders": ["garbage", order("G-1", [{"menu_item": "Margherita", "qty": 1}])]}
+    path = tmp_path / "batch.json"
+    path.write_text(json.dumps(batch))
+    summary = ingest_file(conn, path)
+    assert summary["applied"] == 1
+    assert summary["errors"][0]["order_id"] == "#0"
 
 
 # --- P1 adjacent: oversell may go negative, but feasibility clamps at zero ---

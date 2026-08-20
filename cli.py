@@ -85,6 +85,7 @@ def _stream(graph, graph_input, config: dict) -> dict | None:
     """Stream one graph run. Returns the PO payload if the run paused at the
     approval interrupt, else None."""
     pending_po = None
+    citations = None
     for mode, chunk in graph.stream(
         graph_input,
         config,
@@ -100,6 +101,8 @@ def _stream(graph, graph_input, config: dict) -> dict | None:
                 elif node == "inventory_tools":
                     for message in update.get("messages", []):
                         print(f"{DIM}[tool  {message.name}] {message.content[:90]}{RESET}")
+                if update and update.get("citations"):
+                    citations = update["citations"]
         else:
             message_chunk, meta = chunk
             if meta.get("langgraph_node") in (
@@ -109,6 +112,10 @@ def _stream(graph, graph_input, config: dict) -> dict | None:
                 text = _text(message_chunk.content)
                 if text:
                     print(text, end="", flush=True)
+    if citations:
+        # from retrieved chunk metadata, never parsed from the model's prose
+        sources = " · ".join(f"{c['source']} § {c['section']}" for c in citations)
+        print(f"\n{DIM}[sources  {sources}]{RESET}", end="")
     return pending_po
 
 

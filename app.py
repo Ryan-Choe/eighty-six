@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 REPO = Path(__file__).resolve().parent
 load_dotenv(REPO / ".env")
 
+from langgraph.errors import GraphRecursionError  # noqa: E402
 from langgraph.types import Command  # noqa: E402
 
 from eightysix import db  # noqa: E402
@@ -39,6 +40,9 @@ if "thread_id" not in st.session_state:
     st.session_state.thread_id = str(uuid.uuid4())
     st.session_state.history = []      # [(role, text)] for re-rendering
     st.session_state.pending_po = None
+# outside the guard: a live session from before this key existed (the dev
+# server hot-reloads across source edits) must not AttributeError on it
+st.session_state.setdefault("pending_decision", None)
 
 CONFIG = {
     "configurable": {"thread_id": st.session_state.thread_id},
@@ -65,34 +69,67 @@ def _flat(content) -> str:
 
 def run_turn(graph_input) -> str:
     """Stream one graph run into the current chat message; returns final text."""
+    is_resume = isinstance(graph_input, Command)
     text_area = st.empty()
     collected = []
+    citations = None
+    failed = False
     with st.status("thinking...", expanded=False) as status:
-        for mode, chunk in graph.stream(
-            graph_input, CONFIG, stream_mode=["updates", "messages"]
-        ):
-            if mode == "updates":
-                if "__interrupt__" in chunk:
-                    st.session_state.pending_po = chunk["__interrupt__"][0].value["po_draft"]
-                    continue
-                for node, update in chunk.items():
-                    if node == "route":
-                        status.update(label=f"route -> {update.get('intent')}")
-                    elif node == "inventory_tools":
-                        for m in update.get("messages", []):
-                            status.write(f"tool {m.name}: {str(m.content)[:80]}")
+        # same guards the CLI has: a blip mid-demo should end the turn with a
+        # sentence, not a traceback
+        try:
+            for mode, chunk in graph.stream(
+                graph_input, CONFIG, stream_mode=["updates", "messages"]
+            ):
+                if mode == "updates":
+                    if "__interrupt__" in chunk:
+                        st.session_state.pending_po = chunk["__interrupt__"][0].value["po_draft"]
+                        continue
+                    for node, update in chunk.items():
+                        if node == "route":
+                            status.update(label=f"route -> {update.get('intent')}")
+                        elif node == "inventory_tools":
+                            for m in update.get("messages", []):
+                                status.write(f"tool {m.name}: {str(m.content)[:80]}")
+                        if update and update.get("citations"):
+                            citations = update["citations"]
+                else:
+                    message_chunk, meta = chunk
+                    if meta.get("langgraph_node") in (
+                        "inventory_agent", "deflect", "policy_qa", "draft_po",
+                        "send_po", "cancel_po",
+                    ):
+                        token = _flat(message_chunk.content)
+                        if token:
+                            collected.append(token)
+                            text_area.markdown(_md("".join(collected)))
+            status.update(label="done", state="complete")
+        except GraphRecursionError:
+            failed = True
+            status.update(label="hit the tool budget", state="error")
+            collected.append("\n\nI hit my tool-call budget on that one without "
+                             "landing an answer. Try a narrower question.")
+        except Exception as e:
+            failed = True
+            status.update(label="error", state="error")
+            if is_resume:
+                # send_po commits before the stream finishes, so "nothing was
+                # ordered" would be a guess here -- don't claim it
+                collected.append(f"\n\nSomething went wrong ({type(e).__name__}) "
+                                 "while finalizing the decision. Check the sent "
+                                 "POs before re-ordering.")
             else:
-                message_chunk, meta = chunk
-                if meta.get("langgraph_node") in (
-                    "inventory_agent", "deflect", "policy_qa", "draft_po",
-                    "send_po", "cancel_po",
-                ):
-                    token = _flat(message_chunk.content)
-                    if token:
-                        collected.append(token)
-                        text_area.markdown(_md("".join(collected)))
-        status.update(label="done", state="complete")
-    return "".join(collected)
+                collected.append(f"\n\nSomething went wrong ({type(e).__name__}). "
+                                 "Nothing was ordered -- ask again.")
+    answer = "".join(collected).strip()
+    if citations and not failed:
+        # the state's citations come from retrieved chunk metadata, never from
+        # the model's text -- this line is the UI's sources list
+        sources = " · ".join(f"{c['source']} § {c['section']}" for c in citations)
+        answer += f"\n\n*Sources: {sources}*"
+    if answer:
+        text_area.markdown(_md(answer))
+    return answer
 
 
 # ---- sidebar: the 86 board ---------------------------------------------------
@@ -116,6 +153,9 @@ with st.sidebar:
     )
 
     if st.button("Simulate Friday rush", use_container_width=True):
+        # stock is about to change, so a draft priced against pre-rush stock
+        # is stale -- abandon it, same as asking a new question would
+        st.session_state.pending_po = None
         conn = db.connect()
         summary = ingest_file(conn, REPO / "data" / "pos_orders" / "orders_friday.json")
         conn.close()
@@ -129,6 +169,18 @@ with st.sidebar:
 for role, text in st.session_state.history:
     with st.chat_message(role):
         st.markdown(_md(text))
+
+# an approve/reject click lands here one rerun later, so this pass renders no
+# card and its buttons can't fire twice. Streamlit keeps the PREVIOUS pass's
+# widgets clickable until this run finishes, so a stray click can still abort
+# the stream -- but the decision is consumed before the run starts, so an
+# aborted resume can never replay, and nothing can double-send.
+if (decision := st.session_state.pending_decision) is not None:
+    st.session_state.pending_decision = None
+    with st.chat_message("assistant"):
+        outcome = run_turn(Command(resume={"approved": decision}))
+    if outcome:
+        st.session_state.history.append(("assistant", outcome))
 
 if question := st.chat_input("Ask about stock, reorders, or kitchen policy"):
     question = redact(question)   # before invoke: traces record inputs verbatim
@@ -169,9 +221,8 @@ if po := st.session_state.pending_po:
         if reject.button("Reject", use_container_width=True):
             decision = False
         if decision is not None:
+            # don't resume here: this run would keep rendering the card under
+            # the stream. Kill the card, hand the decision to the next pass.
             st.session_state.pending_po = None
-            with st.chat_message("assistant"):
-                outcome = run_turn(Command(resume={"approved": decision}))
-            if outcome:
-                st.session_state.history.append(("assistant", outcome))
+            st.session_state.pending_decision = decision
             st.rerun()
